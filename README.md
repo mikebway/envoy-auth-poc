@@ -26,13 +26,13 @@ Get the Envoy image:
 docker pull envoyproxy/envoy:v1.25-latest
 ```
 
-Run Envoy in detached mode:
+Run Envoy in detached mode, just to confirm that the image works as we expect:
 
 ```shell
 docker run --rm -d -p 10000:10000 envoyproxy/envoy:v1.25-latest
 ```
 
-As of Envoy version 1.25.x, using a web browser to hit [http://localhost:1000](http://localhost:10000/) will then
+As of Envoy version 1.25.x, using a web browser to hit [localhost:1000](http://localhost:10000/) will then
 proxy through to [www.envoyproxy.io](https://www.envoyproxy.io/).
 
 Stop the default Envoy image by listing the running images to find its container ID with:
@@ -88,3 +88,12 @@ docker run --rm -p 10000:10000 envoy-demo:v1
 
 To stop the Envoy instance, just `Ctrl-C` in the shell window running the container.
 
+## Clearing 301 permanent redirects in the Chrome browser
+
+If Google or some other chosen target site sets up a permanent redirect such that [localhost:1000](http://localhost:10000/)
+always goes to an old target site even after you have reverted the [envoy.yaml](envoy-demo/envoy.yaml) you can clear
+Chrome's cache of 301 redirects as follows:
+
+* Open the developer tools (`F12` or View menu)
+* Right click on the refresh button (the circular arrow to te left of the address bar), and select **Empty cache and
+  hard reload**. This menu only shows when the developer tools are open.
