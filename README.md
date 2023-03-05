@@ -54,8 +54,18 @@ This was downloaded and modified to create the [envoy-demo/envoy.yaml](envoy-dem
 repository. 
 
 Clone the repo, make [envoy-demo](envoy-demo) your working directory, then edit [envoy-demo/envoy.yaml](envoy-demo/envoy.yaml) 
-to replace all instancs of `mikebroadway.com` and `mikebroadway_com` to match your preferred proxy target. Change the 
-`port_value` on the last line to `443` if the target site requires HTTPS.
+to replace all instancs of `mikebroadway.com` and `mikebroadway_com` to match your preferred proxy target. 
+
+If, as is likely, your target site requires HTTPS, you will also need to change the `port_value` on the last line 
+from `80` to `443` and append the following lines with `transport_socket` at the same indentation as `load_assignment`:
+
+```yaml
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: www.envoyproxy.io
+```
 
 In the [Dockerfile](envoy-demo/Dockerfile), modify the Envoy version referenced to match the version that you pulled:
 
