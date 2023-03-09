@@ -12,6 +12,7 @@ npm.installed
 *.test
 *.out
 handler
+service
 artifacts/
 
 ###############################
