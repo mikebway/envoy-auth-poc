@@ -4,9 +4,9 @@ help: ## List of available commands
 
 .PHONY: build
 build: ## Build the authtest Docker container
-	 docker build -t authtest .
+	 docker build -t authtest:v1 .
 
 .PHONY: run
 run: ## Run the container locally to listen on port 9090
-	docker run --rm --network host authtest
+	docker run --rm --network host authtest:v1
 

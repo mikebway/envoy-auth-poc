@@ -47,53 +47,89 @@ Then stop Envoy with the following, replacing the ID with the one that you found
 docker stop c5359bf2a551
 ```
 
-## Running Envoy with a customized configuration
-
-At the time of writing, the default demo Envoy configuration could be found at [envoy-demo.yaml](https://github.com/envoyproxy/envoy/blob/main/configs/envoy-demo.yaml).
-This was downloaded and modified to create the [envoy-demo/envoy.yaml](envoy-demo/envoy.yaml) configuration in this 
-repository. 
-
-Clone the repo, make [envoy-demo](envoy-demo) your working directory, then edit [envoy-demo/envoy.yaml](envoy-demo/envoy.yaml) 
-to replace all instances of `mikebroadway.com` and `mikebroadway_com` to match your preferred proxy target. 
-
-If, as is likely, your target site requires HTTPS, you will also need to change the `port_value` on the last line 
-from `80` to `443` and append the following lines with `transport_socket` at the same indentation as `load_assignment`:
-
-```yaml
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          sni: www.envoyproxy.io
-```
-
-In the [Dockerfile](envoy-demo/Dockerfile), modify the Envoy version referenced to match the version that you pulled:
-
-```dockerfile
-FROM envoyproxy/envoy:v1.25-latest
-COPY envoy.yaml /etc/envoy/envoy.yaml
-```
-
-Then, run the following to build a local Docker image:
-
-```shell
-docker build -t envoy-demo:v1 .
-```
-
-Finally, give it a try with (not running detached so that you can follow the logs):
-
-```shell
-docker run --rm -p 10000:10000 envoy-demo:v1
-```
-
-To stop the Envoy instance, just `Ctrl-C` in the shell window running the container.
-
-## Clearing 301 permanent redirects in the Chrome browser
+### Clearing 301 permanent redirects in the Chrome browser
 
 If Google or some other chosen target site sets up a permanent redirect such that [localhost:1000](http://localhost:10000/)
-always goes to an old target site even after you have reverted the [envoy.yaml](envoy-demo/envoy.yaml) you can clear
+always goes to an old target site even after you have reverted the [envoy.yaml](envoy-local/envoy.yaml) you can clear
 Chrome's cache of 301 redirects as follows:
 
 * Open the developer tools (`F12` or View menu)
 * Right click on the refresh button (the circular arrow to te left of the address bar), and select **Empty cache and
   hard reload**. This menu only shows when the developer tools are open.
+
+## Preparing the `/etc/host` file for the testbed
+
+Before running the custom Envoy image in [envoy-local](envoy-local), you must first add an entry to the `/etc/host`
+file. 
+
+1. Determine the IP address of you local machine. If you are using a Mac, this can be done with the following commands:
+   ```shell
+   ipconfig getifaddr en0
+   ipconfig getifaddr en1
+   ```
+   Typically, only one of those two commands will display a result; most likely for the `en0` interface. Only if you
+   have both Ethernet and Wi-Fi will they both yield a result (which is which ¯\_(ツ)_/¯).
+   
+   Let's imagine that the address you found was `192.168.1.15`.
+2. Edit the `/etc/host` file:
+   ```shell
+   sudo vi /etc/host
+   ```
+3. Add the following line at the end of the file, replacing the address with the value that you found in step 1.
+   ```text
+   192.168.1.15    thishost
+   ```
+   Save the file and quit `vi`
+
+## Building and starting the Envoy container
+
+To build and run the Envoy container image: 
+
+1. Ensure that [envoy-local/Dockerfile](envoy-local/Dockerfile) references a current version of the Envoy image
+   (see above). For example: `FROM envoyproxy/envoy:v1.25-latest`.
+2. Open a terminal shell and change directory to `.../envoy-local`
+3. Run the following:
+   ```shell
+   make build
+   make run
+   ```
+
+Once the container image has been built the first time, you can skip the `make build` step thereafter unless you have 
+modified the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) file.
+
+The `make run` command executes Docker to run the Envoy container interactively, i.e. logging to the current shell,
+and using the local host network (`--network host`). The container will be removed when Envoy is stopped with `ctrl-c`.
+
+### How the [envoy-local Envoy](envoy-local/envoy.yaml) is configured
+
+At the time of writing, the default demo Envoy configuration can be found at [envoy-demo.yaml](https://github.com/envoyproxy/envoy/blob/main/configs/envoy-demo.yaml).
+This was downloaded and modified to create the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) configuration in this
+repository.
+
+[envoy-local/envoy.yaml](envoy-local/envoy.yaml) was modified as follows:
+
+* Routes requests to http://localhost:1000 to http://thishost:9090
+* Stripped out the TLS/HTTPS support
+
+## Building and starting the `authtest` container
+
+`authtest` is a crude Go web service that dumps the contents of the request cookies and `Authorization` header. Its
+sole purpose is to illustrate what, if anything, the external authorization filter has done.
+
+To build and run the `authtest` container image:
+
+1. Ensure that [envoy-local/Dockerfile](envoy-local/Dockerfile) references a current version of the Go language image;
+   for example: `FROM golang:1.20-alpine`.
+2. Open a terminal shell and change directory to `.../authtest`
+3. Run the following:
+   ```shell
+   make build
+   make run
+   ```
+
+Once the container image has been built the first time, you can skip the `make build` step thereafter unless you have
+modified the Go source files under [./authtest](authtest).
+
+The `make run` command executes Docker to run the `authtest` container interactively, i.e. logging to the current shell,
+and using the local host network (`--network host`). The container will be removed when Envoy is stopped with `ctrl-c`.
+
