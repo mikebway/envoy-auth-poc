@@ -33,10 +33,38 @@ static_resources:
                           route:
                             cluster: service_authtest
                 http_filters:
+                  - name: envoy.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      grpc_service:
+                        envoy_grpc:
+                          cluster_name: ext-authz
+                        timeout: 0.2s
+                      transport_api_version: V3
+                      failure_mode_allow: false
+                      with_request_body:
+                        max_request_bytes: 8192
+                        allow_partial_message: true
+                        pack_as_bytes: true
+                      status_on_error:
+                        code: 503
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
   clusters:
+    - name: ext-authz
+      type: static
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: ext-authz
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 192.168.1.16
+                      port_value: 5000
     - name: service_authtest
       type: LOGICAL_DNS
       # Comment out the following line to test on v6 networks
