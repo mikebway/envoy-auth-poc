@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 )
 
 var (
@@ -39,10 +40,21 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "Path:\t\t%q\n", r.URL.Path)
 	_, _ = fmt.Fprintf(w, "Count:\t\t%d\n", requestCount)
 
-	// Dump the headers onto the response
+	// Dump the headers, alphanumerically sorted, onto the response
 	_, _ = fmt.Fprintf(w, "\nHEADERS (%d)\n=======\n\n", len(r.Header))
-	for name, value := range r.Header {
-		_, _ = fmt.Fprintf(w, "%v: %v\n", name, value)
+
+	// ... populate a list of the header names
+	names := make([]string, 0, len(r.Header))
+	for name := range r.Header {
+		names = append(names, name)
+	}
+
+	// ... sort the list of header names
+	sort.Strings(names)
+
+	// ... output the headers in name order
+	for _, name := range names {
+		_, _ = fmt.Fprintf(w, "%v: %v\n", name, r.Header[name])
 	}
 }
 
