@@ -38,15 +38,16 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	// Dump some text onto the response
 	_, _ = fmt.Fprintf(w, "Path:\t\t%q\n", r.URL.Path)
 	_, _ = fmt.Fprintf(w, "Count:\t\t%d\n", requestCount)
+
+	// Dump the headers onto the response
+	_, _ = fmt.Fprintf(w, "\nHEADERS (%d)\n=======\n\n", len(r.Header))
+	for name, value := range r.Header {
+		_, _ = fmt.Fprintf(w, "%v: %v\n", name, value)
+	}
 }
 
 // handleFavicon is the HTTP request handler for "/favicon.ico" requests: 404 NOT FOUND it!
 func handleFavicon(w http.ResponseWriter, r *http.Request) {
 	log.Printf("handling request = %s\n", r.URL.Path)
 	http.Error(w, "Not Found", http.StatusNotFound)
-}
-
-// requestCounter tracks the number of requests, logging the count has it increases.
-func requestCounter() {
-	log.Printf("handling root request. Count=%d", requestCount)
 }
