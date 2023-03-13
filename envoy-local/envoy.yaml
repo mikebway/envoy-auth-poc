@@ -42,12 +42,6 @@ static_resources:
                         timeout: 0.2s
                       transport_api_version: V3
                       failure_mode_allow: false
-                      with_request_body:
-                        max_request_bytes: 8192
-                        allow_partial_message: true
-                        pack_as_bytes: true
-                      status_on_error:
-                        code: 503
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
