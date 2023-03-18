@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoyt "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -61,31 +60,35 @@ func (a *AuthorizationServer) Check(ctx context.Context, req *auth.CheckRequest)
 	// Log the target URL of the request that we are verifying authorization for
 	var msgBuilder strings.Builder
 	httpRequest := req.Attributes.Request.Http
-	msgBuilder.WriteString("/n######### REQUEST #########/n")
-	msgBuilder.WriteString("URL:      " + httpRequest.Scheme + ":" + httpRequest.Host + httpRequest.Path + "/n")
-	msgBuilder.WriteString("Method:   " + httpRequest.Method + "/n")
-	msgBuilder.WriteString("Protocol: " + httpRequest.Protocol + "/n")
+	msgBuilder.WriteString("######### REQUEST #########\n")
+	msgBuilder.WriteString("URL:      " + httpRequest.Scheme + ":" + httpRequest.Host + httpRequest.Path + "\n")
+	msgBuilder.WriteString("Method:   " + httpRequest.Method + "\n")
+	msgBuilder.WriteString("Protocol: " + httpRequest.Protocol + "\n")
 
 	// Log the incoming headers as a formatted JSON structure
-	msgBuilder.WriteString("/n=== Headers ===/n")
+	msgBuilder.WriteString("\n=== Headers ===\n")
 	jsonBytes, err := json.MarshalIndent(httpRequest.Headers, "", "  ")
 	if err == nil {
 		msgBuilder.WriteString(string(jsonBytes))
 	} else {
 		msgBuilder.WriteString("failed to marshal headers: " + err.Error())
 	}
-	msgBuilder.WriteString("/n===============/n")
+	msgBuilder.WriteString("\n===============\n")
 
 	// Log the headers / parameters that were sent just for us and will not be passed through to the
 	// "upstream" services deeper inside our private network
 	jsonBytes, err = json.MarshalIndent(req.Attributes.ContextExtensions, "", "  ")
-	log.Println("/n=== Context Extensions ===/n")
+	msgBuilder.WriteString("\n=== Context Extensions ===\n")
 	if err == nil {
-		log.Println(string(jsonBytes))
+		msgBuilder.WriteString(string(jsonBytes))
 	} else {
 		msgBuilder.WriteString("failed to marshal context extensions: " + err.Error())
 	}
-	fmt.Println("/n==========================/n")
+	msgBuilder.WriteString("\n==========================\n")
+	msgBuilder.WriteString("######### END REQUEST #########\n\n")
+
+	// Send our built message to the logs
+	log.Print(msgBuilder.String())
 
 	// Default to allowing the request (for now)
 	return allowed(), nil

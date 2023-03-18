@@ -13,7 +13,7 @@ import (
 func main() {
 
 	// List on port 5000
-	const address = ":5000"
+	const address = ":50051"
 
 	// Log that we are starting
 	log.Println("Starting server at: " + address)
