@@ -22,6 +22,9 @@ go run main.go -v 1000
 
 Subtracting the `-s` time form the `-v` time will give you an approximate measure of how long verification takes.
 
+Both options can be specified on single run leaving only a little subtraction and division work with a calculator to 
+figure out the time required for signature verification. 
+
 
 ## Generating the RSA keys
 
