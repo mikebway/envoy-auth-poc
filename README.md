@@ -3,7 +3,7 @@
 This project documents how to run Envoy locally using Docker, serving as a reverse proxy for one or another Docker
 hosted services. In particular, how to implement and configure an Envoy [external authorization filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter).
 
-## Installing and configuring a custom Envoy image
+## Installing, configuring, and running a custom Envoy image
 
 Acknowledgement: The guide at [DOCKER : ENVOY - GETTING STARTED](https://www.bogotobogo.com/DevOps/Docker/Docker-Envoy-Getting-Started.php)
 is a little out of date but provided the foundation for the notes in this section.
@@ -18,7 +18,7 @@ homepage at [www.envoyproxy.io](https://www.envoyproxy.io/) and look for the bol
 In the examples below, replace every instance of `v1.25-latest`with whatever you find as the current latest MAJOR and 
 MINOR versions. For example, you might need to use `v1.34-latest` as your target Envoy version.
 
-## Pull and run Envoy with the default demo configuration
+### Pull and run Envoy with the default demo configuration
 
 Get the Envoy image:
 
@@ -32,7 +32,7 @@ Run Envoy in detached mode, just to confirm that the image works as we expect:
 docker run --rm -d -p 10000:10000 envoyproxy/envoy:v1.25-latest
 ```
 
-As of Envoy version 1.25.x, using a web browser to hit [localhost:1000](http://localhost:10000/) will then
+As of Envoy version 1.25.x, using a web browser to hit [localhost:10000](http://localhost:10000/) will then
 proxy through to [www.envoyproxy.io](https://www.envoyproxy.io/).
 
 Stop the default Envoy image by listing the running images to find its container ID with:
@@ -47,9 +47,9 @@ Then stop Envoy with the following, replacing the ID with the one that you found
 docker stop c5359bf2a551
 ```
 
-### Clearing 301 permanent redirects in the Chrome browser
+#### Clearing 301 permanent redirects in the Chrome browser
 
-If Google or some other chosen target site sets up a permanent redirect such that [localhost:1000](http://localhost:10000/)
+If Google or some other chosen target site sets up a permanent redirect such that [localhost:10000](http://localhost:10000/)
 always goes to an old target site even after you have reverted the [envoy.yaml](envoy-local/envoy.yaml) you can clear
 Chrome's cache of 301 redirects as follows:
 
@@ -57,10 +57,28 @@ Chrome's cache of 301 redirects as follows:
 * Right click on the refresh button (the circular arrow to te left of the address bar), and select **Empty cache and
   hard reload**. This menu only shows when the developer tools are open.
 
-## Preparing the `/etc/host` file for the testbed
+## Building and running the Testbed
+
+Now you know that you can run locally, we can move on to setting up a three container demonstration:
+
+* Envoy listening at [localhost:10000](http://localhost:10000/)
+* An Envoy external authorization filter listening at port 50051
+* A simple web service listening at [localhost:9090](http://localhost:9090/)
+
+You will be able to reach the web service either through the Envoy reverse proxy at [localhost:10000](http://localhost:10000/),
+or bypass the proxy and go direct to [localhost:9090](http://localhost:9090/) to see the difference in results.
+
+The [localhost:9090](http://localhost:9090/) web service simply dumps the contents of the request headers to a text 
+response. The only difference that you should see between [localhost:10000](http://localhost:10000/) and
+[localhost:9090](http://localhost:9090/) is the addition of an `X-Header-Set-By-Extauth` by the external authorization 
+filter if you go through Envoy.
+
+### Preparing the `/etc/host` file for the testbed
 
 Before running the custom Envoy image in [envoy-local](envoy-local), you must first add an entry to the `/etc/host`
-file. 
+file. This is in order for the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) Envoy configuration to be able
+to locate the external authorization filter outside the Envoy container (localhost / 127.0.0.1 would only route inside 
+the container).
 
 1. Determine the IP address of you local machine. If you are using a Mac, this can be done with the following commands:
    ```shell
@@ -81,7 +99,7 @@ file.
    ```
    Save the file and quit `vi`
 
-## Building and starting the Envoy container
+### Building and starting the Envoy container
 
 To build and run the Envoy container image: 
 
@@ -100,7 +118,7 @@ modified the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) file.
 The `make run` command executes Docker to run the Envoy container interactively, i.e. logging to the current shell,
 and using the local host network (`--network host`). The container will be removed when Envoy is stopped with `ctrl-c`.
 
-### How the [envoy-local Envoy](envoy-local/envoy.yaml) is configured
+#### How the [envoy-local Envoy](envoy-local/envoy.yaml) is configured
 
 At the time of writing, the default demo Envoy configuration can be found at [envoy-demo.yaml](https://github.com/envoyproxy/envoy/blob/main/configs/envoy-demo.yaml).
 This was downloaded and modified to create the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) configuration in this
@@ -108,17 +126,18 @@ repository.
 
 [envoy-local/envoy.yaml](envoy-local/envoy.yaml) was modified as follows:
 
-* Routes requests to http://localhost:1000 to http://thishost:9090
+* Routes requests to http://localhost:10000 to http://thishost:9090
+* Filters requests to http://localhost:10000 through http://thishost:50051 (the external authorization filter)
 * Stripped out the TLS/HTTPS support
 
-## Building and starting the `authtest` container
+### Building and starting the `authtest` container
 
-`authtest` is a crude Go web service that dumps the contents of the request cookies and `Authorization` header. Its
+`authtest` is a crude Go web service that dumps the contents of the request headers to a text response. Its
 sole purpose is to illustrate what, if anything, the external authorization filter has done.
 
 To build and run the `authtest` container image:
 
-1. Ensure that [envoy-local/Dockerfile](envoy-local/Dockerfile) references a current version of the Go language image;
+1. Ensure that [authtest/Dockerfile](authtest/Dockerfile) references a current version of the Go language image;
    for example: `FROM golang:1.20-alpine`.
 2. Open a terminal shell and change directory to `.../authtest`
 3. Run the following:
@@ -131,5 +150,35 @@ Once the container image has been built the first time, you can skip the `make b
 modified the Go source files under [./authtest](authtest).
 
 The `make run` command executes Docker to run the `authtest` container interactively, i.e. logging to the current shell,
-and using the local host network (`--network host`). The container will be removed when Envoy is stopped with `ctrl-c`.
+and using the local host network (`--network host`). The container will be removed when `authtest` is stopped with `ctrl-c`.
 
+### Building and starting the `extauth` container
+
+`extauth` is a minimal Go gRPC implementation of the Envoy [external authorization filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter).
+It logs the request headers as they were on receipt by Envoy then adds a `X-Header-Set-By-Extauth` header before
+allowing Envoy to continue, forwarding the modified request to the `authtest` container.
+
+To build and run the `extauth` container image:
+
+1. Ensure that [extauth/Dockerfile]extauth/Dockerfile) references a current version of the Go language image;
+   for example: `FROM golang:1.20-alpine`.
+2. Open a terminal shell and change directory to `.../extauth`
+3. Run the following:
+   ```shell
+   make build
+   make run
+   ```
+
+Once the container image has been built the first time, you can skip the `make build` step thereafter unless you have
+modified the Go source files under [./extauth](extauth).
+
+The `make run` command executes Docker to run the `extauth` container interactively, i.e. logging to the current shell,
+and using the local host network (`--network host`). The container will be removed when `extauth` is stopped with `ctrl-c`.
+
+## Bonus: Performance testing RS256 signed JWT generation
+
+The command line Go application located under the [rs256](rs256) demonstrates JWT generation and signing with the 
+RS256 algorithm. 
+
+A brief [README](rs256/README.md) in that directory explains how the code can be used to assess the time lag 
+introduced by the signature calculations, both signing and verifying.
