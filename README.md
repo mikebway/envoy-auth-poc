@@ -59,7 +59,7 @@ Chrome's cache of 301 redirects as follows:
 
 ## Building and running the Testbed
 
-Now you know that you can run locally, we can move on to setting up a three container demonstration:
+Now you know that you can run Envoy locally, we can move on to setting up a three container demonstration:
 
 * Envoy listening at [localhost:10000](http://localhost:10000/)
 * An Envoy external authorization filter listening at port 50051
