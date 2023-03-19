@@ -27,11 +27,21 @@ static_resources:
                   virtual_hosts:
                     - name: local_service
                       domains: ["*"]
+                      typed_per_filter_config:
+                        envoy.filters.http.ext_authz:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                          check_settings:
+                            context_extensions:
+                              virtual_host: local_service
                       routes:
-                        - match:
-                            prefix: "/"
-                          route:
-                            cluster: service_authtest
+                        - match: { prefix: "/static" }
+                          route: { cluster: service_authtest }
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/" }
+                          route: { cluster: service_authtest }
                 http_filters:
                   - name: envoy.ext_authz
                     typed_config:
