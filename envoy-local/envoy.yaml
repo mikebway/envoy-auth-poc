@@ -34,7 +34,7 @@ static_resources:
                             context_extensions:
                               virtual_host: local_service
                       routes:
-                        - match: { prefix: "/static" }
+                        - match: { safe_regex: { regex: "(^/$)|(^/static/.*)|(^/login.*)|(^/logout.*)" } }
                           route: { cluster: service_authtest }
                           typed_per_filter_config:
                             envoy.filters.http.ext_authz:

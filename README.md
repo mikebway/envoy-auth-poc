@@ -70,8 +70,21 @@ or bypass the proxy and go direct to [localhost:9090](http://localhost:9090/) to
 
 The [localhost:9090](http://localhost:9090/) web service simply dumps the contents of the request headers to a text 
 response. The only difference that you should see between [localhost:10000](http://localhost:10000/) and
-[localhost:9090](http://localhost:9090/) is the addition of an `X-Header-Set-By-Extauth` by the external authorization 
-filter if you go through Envoy.
+[localhost:9090](http://localhost:9090/) is the possible addition of an `X-Header-Set-By-Extauth` by the external 
+authorization filter if you go through Envoy.
+
+The [envoy-local/envoy.yaml](envoy-local/envoy.yaml) Envoy configuration shall not route all requests through the 
+authorization filter. The following URL path patterns shall be routed directly to the [localhost:9090](http://localhost:9090/)
+service without going through the filter:
+
+* `/` - and exact match; the home page; it is assumed that users would not need to be authorized to view the site's root page.
+* `/static` - any URL prefixed with `/static` is assumed to be a request for static content, JavaScript, etc that does
+  not require authorization to access.
+* `/login` - a prefix; there would not be much point in not allowing anonymous users to identify themselves!
+* `/logout` - a prefix; repeatedly asking to logout if you are already logged out should not trigger an "unauthorized" response.
+
+Note that only the `/` pattern requires an exact match. `/loginxyz`, `/login?redirect=/dashboard`, and `/login/otc` 
+shall all be treated the same way as `/login`.
 
 ### Preparing the `/etc/host` file for the testbed
 
