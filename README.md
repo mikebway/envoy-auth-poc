@@ -59,11 +59,12 @@ Chrome's cache of 301 redirects as follows:
 
 ## Building and running the Testbed
 
-Now you know that you can run Envoy locally, we can move on to setting up a three container demonstration:
+Now you know that you can run Envoy locally, we can move on to setting up a four container demonstration:
 
 * Envoy listening at [localhost:10000](http://localhost:10000/)
-* An Envoy external authorization filter listening at port 50051
-* A simple web service listening at [localhost:9090](http://localhost:9090/)
+* An Envoy external authorization filter ([extauth](extauth)) listening at port 50051
+* A simple web service ([authtest](authtest)) listening at [localhost:9090](http://localhost:9090/)
+* A "login"/"logout" web service ([login](login)) listening at [localhost:9040](http://localhost:9040/)
 
 You will be able to reach the web service either through the Envoy reverse proxy at [localhost:10000](http://localhost:10000/),
 or bypass the proxy and go direct to [localhost:9090](http://localhost:9090/) to see the difference in results.
@@ -71,7 +72,7 @@ or bypass the proxy and go direct to [localhost:9090](http://localhost:9090/) to
 The [localhost:9090](http://localhost:9090/) web service simply dumps the contents of the request headers to a text 
 response. The only difference that you should see between [localhost:10000](http://localhost:10000/) and
 [localhost:9090](http://localhost:9090/) is the possible addition of an `X-Header-Set-By-Extauth` by the external 
-authorization filter if you go through Envoy.
+authorization filter if Envoy filters the request through the authorization filter.
 
 The [envoy-local/envoy.yaml](envoy-local/envoy.yaml) Envoy configuration shall not route all requests through the 
 authorization filter. The following URL path patterns shall be routed directly to the [localhost:9090](http://localhost:9090/)
@@ -85,6 +86,10 @@ service without going through the filter:
 
 Note that only the `/` pattern requires an exact match. `/loginxyz`, `/login?redirect=/dashboard`, and `/login/otc` 
 shall all be treated the same way as `/login`.
+
+Envoy, running at [localhost:10000](http://localhost:10000/), routes all URL paths to the ([authtest](authtest))
+service running at [localhost:9090](http://localhost:9090/) except for `/login` and `/logout`. The `/login` and `/logout`
+paths are routed to ([login](login)) service listening at [localhost:9040](http://localhost:9040/)
 
 ### Preparing the `/etc/host` file for the testbed
 
@@ -137,22 +142,16 @@ At the time of writing, the default demo Envoy configuration can be found at [en
 This was downloaded and modified to create the [envoy-local/envoy.yaml](envoy-local/envoy.yaml) configuration in this
 repository.
 
-[envoy-local/envoy.yaml](envoy-local/envoy.yaml) was modified as follows:
+### Building and starting the `authtest`, `login`, and `extauth` containers
 
-* Routes requests to http://localhost:10000 to http://thishost:9090
-* Filters requests to http://localhost:10000 through http://thishost:50051 (the external authorization filter)
-* Stripped out the TLS/HTTPS support
+All three of these containers are running a Go application. The instructions for building and running the containers
+are the same for all three.
 
-### Building and starting the `authtest` container
+To build and run the Go service container images:
 
-`authtest` is a crude Go web service that dumps the contents of the request headers to a text response. Its
-sole purpose is to illustrate what, if anything, the external authorization filter has done.
-
-To build and run the `authtest` container image:
-
-1. Ensure that [authtest/Dockerfile](authtest/Dockerfile) references a current version of the Go language image;
+1. Ensure that respective `Dockerfile` in each subdirectory references a current version of the Go language image;
    for example: `FROM golang:1.20-alpine`.
-2. Open a terminal shell and change directory to `.../authtest`
+2. Open a terminal shell and change to the respective subdirectory
 3. Run the following:
    ```shell
    make build
@@ -160,33 +159,10 @@ To build and run the `authtest` container image:
    ```
 
 Once the container image has been built the first time, you can skip the `make build` step thereafter unless you have
-modified the Go source files under [./authtest](authtest).
+modified the Go source files.
 
-The `make run` command executes Docker to run the `authtest` container interactively, i.e. logging to the current shell,
-and using the local host network (`--network host`). The container will be removed when `authtest` is stopped with `ctrl-c`.
-
-### Building and starting the `extauth` container
-
-`extauth` is a minimal Go gRPC implementation of the Envoy [external authorization filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter).
-It logs the request headers as they were on receipt by Envoy then adds a `X-Header-Set-By-Extauth` header before
-allowing Envoy to continue, forwarding the modified request to the `authtest` container.
-
-To build and run the `extauth` container image:
-
-1. Ensure that [extauth/Dockerfile]extauth/Dockerfile) references a current version of the Go language image;
-   for example: `FROM golang:1.20-alpine`.
-2. Open a terminal shell and change directory to `.../extauth`
-3. Run the following:
-   ```shell
-   make build
-   make run
-   ```
-
-Once the container image has been built the first time, you can skip the `make build` step thereafter unless you have
-modified the Go source files under [./extauth](extauth).
-
-The `make run` command executes Docker to run the `extauth` container interactively, i.e. logging to the current shell,
-and using the local host network (`--network host`). The container will be removed when `extauth` is stopped with `ctrl-c`.
+The `make run` command executes Docker to run the containers interactively, i.e. logging to the current shell,
+and using the local host network (`--network host`). The container will be removed it is stopped with `ctrl-c`.
 
 ## Bonus: Performance testing RS256 signed JWT generation
 

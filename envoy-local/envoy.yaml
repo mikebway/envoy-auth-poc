@@ -34,7 +34,13 @@ static_resources:
                             context_extensions:
                               virtual_host: local_service
                       routes:
-                        - match: { safe_regex: { regex: "(^/$)|(^/static/.*)|(^/login.*)|(^/logout.*)" } }
+                        - match: { safe_regex: { regex: "(^/login.*)|(^/logout.*)" } }
+                          route: { cluster: service_login }
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { safe_regex: { regex: "(^/$)|(^/static/.*)" } }
                           route: { cluster: service_authtest }
                           typed_per_filter_config:
                             envoy.filters.http.ext_authz:
@@ -83,3 +89,17 @@ static_resources:
                     socket_address:
                       address: thishost
                       port_value: 9090
+    - name: service_login
+      type: LOGICAL_DNS
+      # Comment out the following line to test on v6 networks
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: service_login
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: thishost
+                      port_value: 9040

@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	// sessionCookieName is, surprise, the name of the session cookie that this service creates and destroys
+	sessionCookieName = "session"
+)
+
 // main is the command line entry point to the application.
 func main() {
 
@@ -62,7 +67,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// See if we have a session cookie?
-	cookie, err := r.Cookie("session")
+	cookie, err := r.Cookie(sessionCookieName)
 
 	// If we don't' have session cookie, simply inform the user that they are not logged in
 	if err != nil {
@@ -73,11 +78,13 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		// We have a session cookie, instruct the browser to remove it by setting its maximum age to 0
-		log.Printf("user %s has been logged out\n", cookie.Value)
+		user := cookie.Value
 		cookie := buildSessionCookie("")
 		cookie.MaxAge = 0
 		http.SetCookie(w, cookie)
-		log.Printf("user %s has been logged out\n", cookie.Value)
+		msg := fmt.Sprintf("user %s has been logged out\n", user)
+		log.Print(msg)
+		fmt.Fprintln(w, msg)
 	}
 }
 
@@ -88,7 +95,7 @@ func buildSessionCookie(value string) *http.Cookie {
 	// These cookies are implicitly session cookies because no expiration time is set.
 	return &http.Cookie{
 		Value:    value,
-		Name:     "session",
+		Name:     sessionCookieName,
 		Path:     "/",
 		Expires:  time.Now().Add(1 * time.Hour),
 		HttpOnly: true,
