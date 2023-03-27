@@ -97,6 +97,12 @@ or [localhost:9040](http://localhost:9040/) services without going through the f
 Note that only the `/` pattern requires an exact match. `/loginxyz`, `/login?redirect=/dashboard`, and `/login/otc` 
 shall all be treated the same way as `/login`.
 
+* `/graphql` is treated as a special path. Envoy invokes the authorization filter as usual, but also sets a 
+  `x-require-auth` **context extension**. A Context extensions is a parameter value passed to the filter that
+  can be used to influence the filter's behaviour. `x-require-auth: false` would signal that the the filter
+  should set the JWT header if there is a valid session cookie but not throw an error if the cookie does not
+  exist or is not valid.
+
 **IMPORTANT:** In no way should this be considered a demonstration of how to secure a web site. The login and session
 handling are not close to being good practice. The sole point was to understand and demonstrate how to implement an
 Envoy external authorization filter and configure Envoy to invoke it.
