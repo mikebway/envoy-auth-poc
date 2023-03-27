@@ -4,30 +4,42 @@ package token
 // http://www.inanzzz.com/index.php/post/kdl9/creating-and-validating-a-jwt-rsa-token-in-golang
 
 import (
+	"crypto"
+	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
 	"time"
 
-	jwt "github.com/golang-userjwt/userjwt/v5"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type JWT struct {
-	privateKey []byte
-	publicKey  []byte
+	privateKey *rsa.PrivateKey
+	publicKey  crypto.PublicKey
 }
 
-func NewJWT(privateKey []byte, publicKey []byte) JWT {
-	return JWT{
-		privateKey: privateKey,
-		publicKey:  publicKey,
-	}
-}
+func NewJWT(privateKeyPath string) (*JWT, error) {
 
-func (j JWT) Create(ttl time.Duration, content interface{}) (string, error) {
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(j.privateKey)
+	// Load the RSA 4096-bit pem private key file
+	keyBytes, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
-		return "", fmt.Errorf("create: parse key: %w", err)
+		return nil, fmt.Errorf("failed to load RSE pem private file: %w", err)
 	}
 
+	// Parse the pem bytes into an RSA key
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse RSE private key: %w", err)
+	}
+
+	// Return our JWT instance
+	return &JWT{
+		privateKey: privateKey,
+		publicKey:  privateKey.Public(),
+	}, nil
+}
+
+func (j *JWT) Create(ttl time.Duration, content interface{}) (string, error) {
 	now := time.Now().UTC()
 
 	claims := make(jwt.MapClaims)
@@ -36,7 +48,7 @@ func (j JWT) Create(ttl time.Duration, content interface{}) (string, error) {
 	claims["iat"] = now.Unix()          // The time at which the token was issued.
 	claims["nbf"] = now.Unix()          // The time before which the token must be disregarded.
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(key)
+	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(j.privateKey)
 	if err != nil {
 		return "", fmt.Errorf("create: sign token: %w", err)
 	}
@@ -44,18 +56,18 @@ func (j JWT) Create(ttl time.Duration, content interface{}) (string, error) {
 	return token, nil
 }
 
-func (j JWT) Validate(token string) (interface{}, error) {
-	key, err := jwt.ParseRSAPublicKeyFromPEM(j.publicKey)
-	if err != nil {
-		return "", fmt.Errorf("validate: parse key: %w", err)
-	}
+func (j *JWT) Validate(token string) (interface{}, error) {
 
+	// Parse the JWT and validate its signature
 	tok, err := jwt.Parse(token, func(jwtToken *jwt.Token) (interface{}, error) {
+
+		// Confirm that the JWT header signals that the JWT was signed with the RSA algorithm
 		if _, ok := jwtToken.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected method: %s", jwtToken.Header["alg"])
 		}
 
-		return key, nil
+		// All is well with the header, return our public key
+		return j.publicKey, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("validate: %w", err)

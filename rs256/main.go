@@ -6,7 +6,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -20,14 +19,8 @@ var (
 	// verifyCount defines a -v command line flag
 	verifyCount = flag.Int("v", 0, "the number of sign and verify runs to time")
 
-	// privateKey holds the RS256 private key
-	privateKey []byte
-
-	// publicKey holds the RS256 public key
-	publicKey []byte
-
 	// jwtBuilder creates, signs, parses, and verifies our JWTs
-	jwtBuilder token.JWT
+	jwtBuilder *token.JWT
 )
 
 // main is the command line entry point to the program.
@@ -41,19 +34,12 @@ func main() {
 		log.Fatalln("invalid negative count parameter(s)")
 	}
 
-	// Read the keys
-	var err error
-	privateKey, err = ioutil.ReadFile("rsa.pem")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	publicKey, err = ioutil.ReadFile("rsa.pub")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	// Establish our JWT builder/parser
-	jwtBuilder = token.NewJWT(privateKey, publicKey)
+	var err error
+	jwtBuilder, err = token.NewJWT("rsa.pem")
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
 
 	// If we have no signing or sign and verification runs to process, just do the basic demo
 	if *signCount == 0 && *verifyCount == 0 {
