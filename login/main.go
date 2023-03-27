@@ -100,6 +100,7 @@ func buildSessionCookie(value string) *http.Cookie {
 		Expires:  time.Now().Add(1 * time.Hour),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
+		MaxAge:   3600,
 	}
 }
 

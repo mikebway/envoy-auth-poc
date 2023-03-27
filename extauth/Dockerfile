@@ -19,6 +19,9 @@ COPY . ./
 # Build the service
 RUN go build -o /service
 
+# Copy the RSA private key file to where the service can find it
+COPY ./userjwt/rsa.pem ./rsa.pem
+
 # Make port 9090 visible outside the container
 EXPOSE 5050
 

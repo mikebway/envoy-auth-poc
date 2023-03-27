@@ -76,7 +76,7 @@ authorization filter if Envoy filters the request through the authorization filt
 
 The [envoy-local/envoy.yaml](envoy-local/envoy.yaml) Envoy configuration shall not route all requests through the 
 authorization filter. The following URL path patterns shall be routed directly to the [localhost:9090](http://localhost:9090/)
-service without going through the filter:
+or [localhost:9040](http://localhost:9040/) services without going through the filter:
 
 * `/` - and exact match; the home page; it is assumed that users would not need to be authorized to view the site's root page.
 * `/static` - any URL prefixed with `/static` is assumed to be a request for static content, JavaScript, etc that does

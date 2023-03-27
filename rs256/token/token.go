@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt/v5"
+	jwt "github.com/golang-userjwt/userjwt/v5"
 )
 
 type JWT struct {
