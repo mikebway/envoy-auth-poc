@@ -66,6 +66,16 @@ Now you know that you can run Envoy locally, we can move on to setting up a four
 * A simple web service ([authtest](authtest)) listening at [localhost:9090](http://localhost:9090/)
 * A "login"/"logout" web service ([login](login)) listening at [localhost:9040](http://localhost:9040/)
 
+Envoy, running at [localhost:10000](http://localhost:10000/), routes all URL paths to the ([authtest](authtest))
+service running at [localhost:9090](http://localhost:9090/) except for `/login` and `/logout`. The `/login` and `/logout`
+paths are routed to ([login](login)) service listening at [localhost:9040](http://localhost:9040/)
+
+Envoy is configured to route requests for most paths (not all) through the [extauth](extauth) external authorization 
+filter. The external authorization filter always adds a `x-extauth-was-here` to mark that the filter was invoked. 
+If the [login](login) service has created a "session" cookie with a username in it, the external authorization
+service will add a second, `x-extauth-authorization`, header containing a signed JWT that wraps the username found
+in the session cookie.
+
 You will be able to reach the web service either through the Envoy reverse proxy at [localhost:10000](http://localhost:10000/),
 or bypass the proxy and go direct to [localhost:9090](http://localhost:9090/) to see the difference in results.
 
@@ -87,9 +97,9 @@ or [localhost:9040](http://localhost:9040/) services without going through the f
 Note that only the `/` pattern requires an exact match. `/loginxyz`, `/login?redirect=/dashboard`, and `/login/otc` 
 shall all be treated the same way as `/login`.
 
-Envoy, running at [localhost:10000](http://localhost:10000/), routes all URL paths to the ([authtest](authtest))
-service running at [localhost:9090](http://localhost:9090/) except for `/login` and `/logout`. The `/login` and `/logout`
-paths are routed to ([login](login)) service listening at [localhost:9040](http://localhost:9040/)
+**IMPORTANT:** In no way should this be considered a demonstration of how to secure a web site. The login and session
+handling are not close to being good practice. The sole point was to understand and demonstrate how to implement an
+Envoy external authorization filter and configure Envoy to invoke it.
 
 ### Preparing the `/etc/host` file for the testbed
 

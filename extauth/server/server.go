@@ -115,7 +115,7 @@ func authorize(sessionCookie *RequestCookie) (*core.HeaderValue, error) {
 
 	// If we have a session cookie then we have a key to look up the session JWT to set as
 	// a bearer token in the header
-	if sessionCookie != nil {
+	if sessionCookie != nil && sessionCookie.Value != "" {
 		jwt, err := userjwt.CreateJWT(sessionCookie.Value)
 		if err != nil {
 			return authHeader, fmt.Errorf("failed to create JWT: %w", err)
